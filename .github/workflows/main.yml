@@ -1,33 +1,4 @@
-Run SonarSource/sonarqube-scan-action@v2
-/usr/bin/docker run --name c495ad014ad1126db43cda0036656023c32c8_d63928 --label 5c495a --workdir /github/workspace --rm -e "DOCKER_IMAGE" -e "SONAR_TOKEN" -e "SONAR_HOST_URL" -e "INPUT_ARGS" -e "INPUT_PROJECTBASEDIR" -e "HOME" -e "GITHUB_JOB" -e "GITHUB_REF" -e "GITHUB_SHA" -e "GITHUB_REPOSITORY" -e "GITHUB_REPOSITORY_OWNER" -e "GITHUB_REPOSITORY_OWNER_ID" -e "GITHUB_RUN_ID" -e "GITHUB_RUN_NUMBER" -e "GITHUB_RETENTION_DAYS" -e "GITHUB_RUN_ATTEMPT" -e "GITHUB_ACTOR_ID" -e "GITHUB_ACTOR" -e "GITHUB_WORKFLOW" -e "GITHUB_HEAD_REF" -e "GITHUB_BASE_REF" -e "GITHUB_EVENT_NAME" -e "GITHUB_SERVER_URL" -e "GITHUB_API_URL" -e "GITHUB_GRAPHQL_URL" -e "GITHUB_REF_NAME" -e "GITHUB_REF_PROTECTED" -e "GITHUB_REF_TYPE" -e "GITHUB_WORKFLOW_REF" -e "GITHUB_WORKFLOW_SHA" -e "GITHUB_REPOSITORY_ID" -e "GITHUB_TRIGGERING_ACTOR" -e "GITHUB_WORKSPACE" -e "GITHUB_ACTION" -e "GITHUB_EVENT_PATH" -e "GITHUB_ACTION_REPOSITORY" -e "GITHUB_ACTION_REF" -e "GITHUB_PATH" -e "GITHUB_ENV" -e "GITHUB_STEP_SUMMARY" -e "GITHUB_STATE" -e "GITHUB_OUTPUT" -e "RUNNER_OS" -e "RUNNER_ARCH" -e "RUNNER_NAME" -e "RUNNER_ENVIRONMENT" -e "RUNNER_TOOL_CACHE" -e "RUNNER_TEMP" -e "RUNNER_WORKSPACE" -e "ACTIONS_RUNTIME_URL" -e "ACTIONS_RUNTIME_TOKEN" -e "ACTIONS_CACHE_URL" -e "ACTIONS_RESULTS_URL" -e "ACTIONS_ORCHESTRATION_ID" -e GITHUB_ACTIONS=true -e CI=true --entrypoint "/entrypoint.sh" -v "/var/run/docker.sock":"/var/run/docker.sock" -v "/home/runner/work/_temp":"/github/runner_temp" -v "/home/runner/work/_temp/_github_home":"/github/home" -v "/home/runner/work/_temp/_github_workflow":"/github/workflow" -v "/home/runner/work/_temp/_runner_file_commands":"/github/file_commands" -v "/home/runner/work/user-service/user-service":"/github/workspace" 5c495a:d014ad1126db43cda0036656023c32c8
-INFO: Scanner configuration file: /opt/sonar-scanner/conf/sonar-scanner.properties
-INFO: Project root configuration file: NONE
-INFO: SonarScanner 5.0.1.3006
-INFO: Java 17.0.11 Alpine (64-bit)
-INFO: Linux 6.17.0-1010-azure amd64
-INFO: User cache: /opt/sonar-scanner/.sonar/cache
-INFO: Analyzing on SonarQube server 26.3.0.120487
-INFO: Default locale: "en_US", source code encoding: "UTF-8" (analysis is platform dependent)
-WARN: Java 17 scanner support ends with SonarQube 2026.3 (July 2026). Please upgrade to Java 21 or newer, or use JRE auto-provisioning to keep this requirement always up to date.
-INFO: Load global settings
-INFO: Load global settings (done) | time=526ms
-INFO: Server id: 147B411E-AZ1safsEglDg7GUXScSG
-INFO: Loading required plugins
-INFO: Load plugins index
-INFO: Load plugins index (done) | time=260ms
-INFO: Load/download plugins
-INFO: Load/download plugins (done) | time=5275ms
-INFO: Process project properties
-INFO: ------------------------------------------------------------------------
-INFO: EXECUTION FAILURE
-INFO: ------------------------------------------------------------------------
-INFO: Total time: 14.528s
-INFO: Final Memory: 9M/40M
-INFO: ------------------------------------------------------------------------
-ERROR: Error during SonarScanner execution
-ERROR: You must define the following mandatory properties for 'Unknown': sonar.projectKey
-ERROR:
-ERROR: Re-run SonarScanner using the -X switch to enable full debug logging.
+
 
 name: CI Pipeline
 
