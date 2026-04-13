@@ -135,7 +135,7 @@ jobs:
           username: ${{ secrets.SMTP_USERNAME }}
           password: ${{ secrets.SMTP_PASSWORD }}
           subject: CI/CD Pipeline Result for ${{ github.event.inputs.image_tag }}
-          to: ${{ secrets.NOTIFY_EMAIL }}
+          to: ${{ secrets.EMAIL_RECIPIENTS }}
           from: GitHub Actions
           body: >
             The pipeline for tag "${{ github.event.inputs.image_tag }}" finished running.
