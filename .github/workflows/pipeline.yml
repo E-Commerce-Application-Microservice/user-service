@@ -1,4 +1,4 @@
-name: Parameterized Docker Pipeline
+name: CI/CD Pipeline
 
 on:
   workflow_dispatch:
@@ -9,8 +9,52 @@ on:
         default: 'latest'
 
 jobs:
+  sonar-sast:
+    name: SonarQube (Code Quality)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install Dependencies
+        run: npm ci || npm install
+
+      # Configured for self-hosted SonarQube Server on an EC2 instance
+      - name: SonarQube Scan
+        uses: sonarsource/sonarqube-scan-action@master
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+
+  snyk-sca:
+    name: Snyk (SCA / Vulnerability Scan)
+    needs: sonar-sast
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install Dependencies
+        run: npm ci || npm install
+
+      - name: Snyk SCA Scan
+        uses: snyk/actions/node@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+
   build-image:
-    name: Build Image
+    name: Docker Build
+    needs: snyk-sca
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -30,7 +74,7 @@ jobs:
           retention-days: 1
 
   scan-image:
-    name: Scan Image
+    name: Trivy (Image Scan)
     needs: build-image
     runs-on: ubuntu-latest
     steps:
@@ -42,16 +86,21 @@ jobs:
       - name: Load Docker Image
         run: docker load -i image.tar
 
-      - name: Snyk Container Scan
-        uses: snyk/actions/docker@master
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
         env:
-          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+          TRIVY_DB_REPOSITORY: ghcr.io/aquasecurity/trivy-db,public.ecr.aws/aquasecurity/trivy-db
+          TRIVY_JAVA_DB_REPOSITORY: ghcr.io/aquasecurity/trivy-java-db,public.ecr.aws/aquasecurity/trivy-java-db
         with:
-          image: ${{ secrets.DOCKER_USERNAME }}/user-service:${{ github.event.inputs.image_tag }}
-          args: --severity-threshold=high
+          image-ref: ${{ secrets.DOCKER_USERNAME }}/user-service:${{ github.event.inputs.image_tag }}
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          vuln-type: 'os,library'
+          severity: 'CRITICAL,HIGH'
 
   push-image:
-    name: Push Image
+    name: Push / Deploy
     needs: scan-image
     runs-on: ubuntu-latest
     steps:
@@ -74,7 +123,7 @@ jobs:
 
   notify:
     name: Send Email
-    needs: [build-image, scan-image, push-image]
+    needs: [sonar-sast, snyk-sca, build-image, scan-image, push-image]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -85,12 +134,9 @@ jobs:
           server_port: ${{ secrets.SMTP_PORT }}
           username: ${{ secrets.SMTP_USERNAME }}
           password: ${{ secrets.SMTP_PASSWORD }}
-          subject: Docker Build & Push Result
+          subject: CI/CD Pipeline Result for ${{ github.event.inputs.image_tag }}
           to: ${{ secrets.NOTIFY_EMAIL }}
           from: GitHub Actions
           body: >
-            The Docker pipeline for tag "${{ github.event.inputs.image_tag }}" finished.
-            Build: ${{ needs.build-image.result }}
-            Scan: ${{ needs.scan-image.result }}
-            Push: ${{ needs.push-image.result }}
-            See run details: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            The pipeline for tag "${{ github.event.inputs.image_tag }}" finished running.
+            Status link: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
