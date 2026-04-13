@@ -1,8 +1,10 @@
 FROM node:18-alpine
+RUN apk update && apk upgrade --no-cache
 WORKDIR /app
 COPY package*.json ./
 RUN npm install --production
 COPY . .
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm
 EXPOSE 3001
 HEALTHCHECK --interval=30s --timeout=3s CMD wget -qO- http://localhost:3001/health || exit 1
 CMD ["node", "src/index.js"]
