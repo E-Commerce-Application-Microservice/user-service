@@ -1,0 +1,55 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  sast-sca:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install Dependencies
+        run: npm install
+
+      - name: SonarQube Scan (SAST)
+        uses: sonarsource/sonarqube-scan-action@master
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+
+      - name: Snyk SCA Scan
+        uses: snyk/actions/node@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        
+  notify:
+    needs: sast-sca
+    runs-on: ubuntu-latest
+    if: always()
+    steps:
+      - name: Send Email Notification
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{ secrets.SMTP_SERVER }}
+          server_port: ${{ secrets.SMTP_PORT }}
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: CI Pipeline Result - ${{ needs.sast-sca.result }}
+          to: ${{ secrets.NOTIFY_EMAIL }}
+          from: GitHub Actions
+          body: >
+            The CI pipeline (Sonar SAST & Snyk SCA) finished with status ${{ needs.sast-sca.result }}. 
+            See run details: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
+
+            If successful, you can now trigger the parameterized Docker pipeline from the Actions tab.
