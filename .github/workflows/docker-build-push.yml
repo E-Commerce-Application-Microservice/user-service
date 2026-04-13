@@ -9,20 +9,38 @@ on:
         default: 'latest'
 
 jobs:
-  build-scan-push:
+  build-image:
+    name: Build Image
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Log in to Docker Hub
-        uses: docker/login-action@v2
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_PASSWORD }}
-
       - name: Build Docker Image
         run: docker build -t ${{ secrets.DOCKER_USERNAME }}/user-service:${{ github.event.inputs.image_tag }} .
+
+      - name: Save Docker Image to Tar Archive
+        run: docker save ${{ secrets.DOCKER_USERNAME }}/user-service:${{ github.event.inputs.image_tag }} > image.tar
+
+      - name: Upload Docker Image Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: docker-image-artifact
+          path: image.tar
+          retention-days: 1
+
+  scan-image:
+    name: Scan Image
+    needs: build-image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Docker Image Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image-artifact
+
+      - name: Load Docker Image
+        run: docker load -i image.tar
 
       - name: Snyk Container Scan
         uses: snyk/actions/docker@master
@@ -30,13 +48,33 @@ jobs:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
         with:
           image: ${{ secrets.DOCKER_USERNAME }}/user-service:${{ github.event.inputs.image_tag }}
-          args: --file=Dockerfile --severity-threshold=high
+          args: --severity-threshold=high
+
+  push-image:
+    name: Push Image
+    needs: scan-image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download Docker Image Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: docker-image-artifact
+
+      - name: Load Docker Image
+        run: docker load -i image.tar
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Push Docker Image
         run: docker push ${{ secrets.DOCKER_USERNAME }}/user-service:${{ github.event.inputs.image_tag }}
 
   notify:
-    needs: build-scan-push
+    name: Send Email
+    needs: [build-image, scan-image, push-image]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -47,9 +85,12 @@ jobs:
           server_port: ${{ secrets.SMTP_PORT }}
           username: ${{ secrets.SMTP_USERNAME }}
           password: ${{ secrets.SMTP_PASSWORD }}
-          subject: Docker Build & Push Result - ${{ needs.build-scan-push.result }}
+          subject: Docker Build & Push Result
           to: ${{ secrets.NOTIFY_EMAIL }}
           from: GitHub Actions
           body: >
-            The Docker build and push pipeline for tag "${{ github.event.inputs.image_tag }}" finished with status ${{ needs.build-scan-push.result }}.
+            The Docker pipeline for tag "${{ github.event.inputs.image_tag }}" finished.
+            Build: ${{ needs.build-image.result }}
+            Scan: ${{ needs.scan-image.result }}
+            Push: ${{ needs.push-image.result }}
             See run details: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}

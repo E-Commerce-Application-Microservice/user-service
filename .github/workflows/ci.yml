@@ -8,7 +8,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  sast-sca:
+  sonar-sast:
+    name: SonarQube SAST
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -20,21 +21,37 @@ jobs:
           node-version: '18'
 
       - name: Install Dependencies
-        run: npm install
+        run: npm ci || npm install
 
-      - name: SonarQube Scan (SAST)
+      # Configured for self-hosted SonarQube Server on an EC2 instance
+      - name: SonarQube Scan
         uses: sonarsource/sonarqube-scan-action@master
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
 
+  snyk-sca:
+    name: Snyk SCA
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install Dependencies
+        run: npm ci || npm install
+
       - name: Snyk SCA Scan
         uses: snyk/actions/node@master
         env:
           SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
-        
+
   notify:
-    needs: sast-sca
+    needs: [sonar-sast, snyk-sca]
     runs-on: ubuntu-latest
     if: always()
     steps:
@@ -45,11 +62,11 @@ jobs:
           server_port: ${{ secrets.SMTP_PORT }}
           username: ${{ secrets.SMTP_USERNAME }}
           password: ${{ secrets.SMTP_PASSWORD }}
-          subject: CI Pipeline Result - ${{ needs.sast-sca.result }}
+          subject: CI Pipeline Result
           to: ${{ secrets.NOTIFY_EMAIL }}
           from: GitHub Actions
           body: >
-            The CI pipeline (Sonar SAST & Snyk SCA) finished with status ${{ needs.sast-sca.result }}. 
+            The CI pipeline has finished running.
+            Sonar SAST result: ${{ needs.sonar-sast.result }}
+            Snyk SCA result: ${{ needs.snyk-sca.result }}
             See run details: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
-
-            If successful, you can now trigger the parameterized Docker pipeline from the Actions tab.
